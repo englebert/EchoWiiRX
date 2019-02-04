@@ -27,6 +27,19 @@ uint16_t backlight_counter = 0;
 uint8_t backlight_enable = 1;
 uint8_t backlight_pattern = 0B01000010;
 uint8_t backlight_pattern_pos = 0;
+
+#define RIGHTWING_LED 5
+uint16_t rightwing_light_counter = 0;
+uint8_t rightwing_light_enable = 1;
+uint8_t rightwing_light_pattern = 0B000101101;
+uint8_t rightwing_light_pattern_pos = 0;
+
+#define LEFTWING_LED 6
+uint16_t leftwing_light_counter = 0;
+uint8_t leftwing_light_enable = 1;
+uint8_t leftwing_light_pattern = 0B000101101;
+uint8_t leftwing_light_pattern_pos = 0;
+
 #define BACKLIGHT_ENABLE 1
 #define BACKLIGHT_DISABLE 0
 
@@ -135,7 +148,9 @@ void setPPMValuesFromData() {
             backlight_enable = 1;
         if(command_value == BACKLIGHT_DISABLE) {
             // Disable LED
-            PORTD = PORTD & ~B00010000;     // Turns OFF
+            PORTD = PORTD & ~B00010000;     // Turns OFF D4
+            PORTD = PORTD & ~B00100000;     // Turns OFF D5
+            PORTD = PORTD & ~B01000000;     // Turns OFF D6
             backlight_enable = 0;
         } 
     } 
@@ -162,6 +177,8 @@ void setup() {
     // Setting Up LED Port
     pinMode(DISPLAY_LED, OUTPUT);       // D3
     pinMode(BACKLIGHT_LED, OUTPUT);     // D4
+    pinMode(RIGHTWING_LED, OUTPUT);     // D5
+    pinMode(LEFTWING_LED, OUTPUT);      // D6
 
     // Debug
     Serial.begin(9600);
@@ -248,6 +265,9 @@ ISR(TIMER1_COMPA_vect){
     TCNT1 = 0;
 
     backlight_counter++;
+    rightwing_light_counter++;
+    leftwing_light_counter++;
+
     // Flip it
     // TODO: HERE to enable or disable
     if(backlight_enable == 1) {
@@ -256,14 +276,42 @@ ISR(TIMER1_COMPA_vect){
     
             // Based on pattern to switch on / off the lights
             if(((backlight_pattern >> backlight_pattern_pos) & 0x01) == 1) {
-                PORTD = PORTD |  B00010000;     // Turns ON
+                PORTD = PORTD |  B00010000;     // Turns ON D4
             } else {
-                PORTD = PORTD & ~B00010000;     // Turns OFF
+                PORTD = PORTD & ~B00010000;     // Turns OFF D4
             }
             backlight_pattern_pos++;
     
             if(backlight_pattern_pos > 7) backlight_pattern_pos = 0;
         }
+
+        // For left and right wing will be using this section for the moment. Later will shift to detecting the 
+        // signal and display the pattern accordingly.
+        if(rightwing_light_counter > 50) {
+            rightwing_light_counter = 0;      // Reset
+    
+            if(((rightwing_light_pattern >> rightwing_light_pattern_pos) & 0x01) == 1) {
+                PORTD = PORTD |  B00100000;     // Turns ON D5
+            } else {
+                PORTD = PORTD & ~B00100000;     // Turns OFF D5
+            }
+            rightwing_light_pattern_pos++;
+   
+            if(rightwing_light_pattern_pos > 7) rightwing_light_pattern_pos = 0;
+        }
+        if(leftwing_light_counter > 50) {
+            leftwing_light_counter = 0;      // Reset
+    
+            if(((leftwing_light_pattern >> leftwing_light_pattern_pos) & 0x01) == 1) {
+                PORTD = PORTD |  B01000000;     // Turns ON D6
+            } else {
+                PORTD = PORTD & ~B01000000;     // Turns OFF D6
+            }
+            leftwing_light_pattern_pos++;
+   
+            if(leftwing_light_pattern_pos > 7) leftwing_light_pattern_pos = 0;
+        }
+    
     }
 
     if(state) {
